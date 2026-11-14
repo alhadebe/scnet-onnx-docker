@@ -1,0 +1,8 @@
+.git
+.gitignore
+audio
+models
+output
+node_modules
+*.zip
+*.log

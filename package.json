@@ -1,0 +1,10 @@
+{
+  "name": "scnet-onnx-benchmark",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@audio/neural-separate": "0.7.0",
+    "onnxruntime-node": "1.31.1"
+  }
+}

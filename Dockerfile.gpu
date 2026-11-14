@@ -1,0 +1,15 @@
+# ONNX Runtime Node 1.31.x CUDA backend requires CUDA 12.x and cuDNN 9.
+# The host NVIDIA driver must support the CUDA runtime version below.
+FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl gnupg ffmpeg \
+  && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
+COPY benchmark.mjs ./
+ENV AUDIO_NEURAL_CACHE=/cache
+ENTRYPOINT ["node", "--max-old-space-size=4096", "/app/benchmark.mjs"]
