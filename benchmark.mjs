@@ -7,6 +7,8 @@ import { basename, extname, join } from 'node:path';
 import os from 'node:os';
 
 const device = process.env.DEVICE || 'cpu';
+// Native CPU is called 'node' by @audio/neural-runtime. CUDA is enabled in Dockerfile.gpu.
+const backend = device === 'cpu' ? 'node' : device;
 const model = process.env.MODEL || 'scnet';
 const input = process.argv[2];
 const rate = 44100;
@@ -36,7 +38,7 @@ async function main() {
   const destination = join('/output', `${name}_${model}_${device}`);
   mkdirSync(destination, { recursive: true });
   console.log(`Host: ${os.cpus()[0]?.model || 'unknown'}; cores visible: ${os.cpus().length}`);
-  console.log(`Model=${model}; backend requested=${device}; input=${input}`);
+  console.log(`Model=${model}; device requested=${device}; backend=${backend}; input=${input}`);
   if (device === 'cuda') {
     const nvidia = run('nvidia-smi', ['--query-gpu=name,driver_version,memory.total', '--format=csv,noheader']);
     console.log(`NVIDIA GPU: ${nvidia.toString().trim()}`);
@@ -65,7 +67,7 @@ async function main() {
   const result = await separate([left, right], {
     sampleRate: rate,
     model,
-    device,
+    device: backend,
     progress: ({chunk, totalChunks}) => {
       const percent = Math.round(100 * chunk / Math.max(1, totalChunks));
       if (percent >= lastProgress + 10 || percent >= 100) {
@@ -97,7 +99,7 @@ async function main() {
   }
   const saveSeconds = elapsed(saveStart);
   const stats = {
-    input, model, device_requested: device,
+    input, model, device_requested: device, backend_requested: backend,
     audio_seconds: round(duration),
     decode_seconds: round(decodeSeconds),
     separation_seconds: round(separationSeconds),

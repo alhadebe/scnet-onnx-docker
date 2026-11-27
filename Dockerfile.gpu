@@ -1,6 +1,7 @@
-# ONNX Runtime Node 1.31.x CUDA backend requires CUDA 12.x and cuDNN 9.
+# The installed ONNX Runtime Node 1.31.1 CUDA provider links against CUDA 13.
+# Include cuDNN in the base image.
 # The host NVIDIA driver must support the CUDA runtime version below.
-FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:13.2.1-cudnn-runtime-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl gnupg ffmpeg \
@@ -10,6 +11,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
+# neural-runtime supports native Node providers, but its current allowlist omits CUDA.
+# Fail the build if the expected patch or provider binary is missing.
+RUN set -eu; \
+    file=/app/node_modules/@audio/neural-runtime/runtime.js; \
+    sed -i '/^const NODE_EPS =/c\const NODE_EPS = new Set(["webgpu", "coreml", "cuda"])' "$file"; \
+    grep -Fx 'const NODE_EPS = new Set(["webgpu", "coreml", "cuda"])' "$file"; \
+    node --check "$file"; \
+    test -f /app/node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_cuda.so
 COPY benchmark.mjs ./
 ENV AUDIO_NEURAL_CACHE=/cache
 ENTRYPOINT ["node", "--max-old-space-size=4096", "/app/benchmark.mjs"]
